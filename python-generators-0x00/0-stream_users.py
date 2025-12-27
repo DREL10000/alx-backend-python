@@ -1,46 +1,68 @@
 #!/usr/bin/python3
-"""
-Module for streaming user data from MySQL database using generators.
-"""
+# 0-stream_users.py (concise version)
+
 import mysql.connector
+from typing import Dict, Generator
 from mysql.connector import Error
 
+# Database configuration
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',  # Add your MySQL password here if needed
+    'database': 'ALX_prodev',
+    'port': 3306
+}
 
-def stream_users():
+
+def stream_users() -> Generator[Dict[str, any], None, None]:
     """
-    Generator function that fetches rows one by one from the user_data table.
+    Generator function that streams rows one by one from the user_data table.
+    Uses only one loop as required.
     
     Yields:
-        dict: A dictionary containing user data with keys: user_id, name, email, age
+        Dictionary containing user data for one row at a time
     """
-    connection = None
-    cursor = None
-    
     try:
-        # Connect to the ALX_prodev database
-        connection = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='',  # Update with your MySQL password
-            database='ALX_prodev'
-        )
+        # Connect to the database
+        connection = mysql.connector.connect(**DB_CONFIG)
         
-        if connection.is_connected():
-            cursor = connection.cursor(dictionary=True)
-            
-            # Execute query to fetch all rows
+        if not connection.is_connected():
+            return  # Early return if connection fails
+        
+        # Create dictionary cursor
+        with connection.cursor(dictionary=True) as cursor:
+            # Execute query
             cursor.execute("SELECT * FROM user_data")
             
-            # Yield rows one by one
+            # Single loop with yield - this is the key requirement
             for row in cursor:
                 yield row
                 
     except Error as e:
-        print(f"Error connecting to MySQL: {e}")
-    
+        print(f"Database error: {e}")
     finally:
-        # Clean up resources
-        if cursor:
-            cursor.close()
-        if connection and connection.is_connected():
+        if 'connection' in locals() and connection.is_connected():
             connection.close()
+
+
+# Minimal version that strictly follows requirements
+def stream_users_minimal() -> Generator[Dict[str, any], None, None]:
+    """
+    Minimal implementation with exactly one loop as required.
+    
+    Yields:
+        Dictionary containing user data for one row at a time
+    """
+    connection = mysql.connector.connect(**DB_CONFIG)
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM user_data")
+    
+    # Exactly one loop as required
+    row = cursor.fetchone()
+    while row:
+        yield row
+        row = cursor.fetchone()
+    
+    cursor.close()
+    connection.close()
